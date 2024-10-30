@@ -7,12 +7,7 @@ import os.path as osp
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
-
-import open3d as o3d
-import os
-import numpy as np
-import imageio
-import os.path as osp
+from spann3r.model import Spann3R
 
 def render_frames(pts_all, image_all, camera_parameters, output_dir, mask=None, save_video=True, save_camera=True):
     t, h, w, _ = pts_all.shape
@@ -70,8 +65,6 @@ def render_frames(pts_all, image_all, camera_parameters, output_dir, mask=None, 
         writer.close()
 
     vis.destroy_window()
-
-
 
 def find_render_cam(pcd):
     last_camera_params = None
@@ -147,8 +140,6 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
         if save_video:
             pts_writer.append_data(pt_vis_rgb_uint8)
 
-        
-
         if images_all is not None:
             image = images_all[frame_id]
             image_uint8 = (image * 255).astype(np.uint8)
@@ -173,11 +164,3 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
             imgs_writer.close()
         if conf_all is not None:
             conf_writer.close()
-
-
-
-
-
-    
-
-
