@@ -177,12 +177,94 @@ class Co3d(BaseManyViewDataset):
         
         return views
 
+    def get_views_flexible_order(self, idx, resolution, rng, attempts=0):
+        obj, instance = self.scene_list[idx // self.num_seq]
+        image_pool = self.scenes[obj, instance]
 
+        img_idx = range(0, len(image_pool))
+        imgs_idxs = self.sample_frames(img_idx, rng)
 
+        if resolution not in self.invalidate[obj, instance]:  # flag invalid images
+            self.invalidate[obj, instance][resolution] = [False for _ in range(len(image_pool))]
+        
+        mask_bg = (self.mask_bg == True) or (self.mask_bg == 'rand' and rng.choice(2))
+       
+        imgs_idxs = deque(imgs_idxs)
 
+        max_depth_min = 1e8
+        max_depth_max = 0.      
+        max_depth_first = None  
+        
 
+        views = []
 
+        while len(imgs_idxs) > 0: 
+            im_idx = imgs_idxs.popleft()
 
-    
+            if self.invalidate[obj, instance][resolution][im_idx]:
+                # search for a valid image
+                random_direction = 2 * rng.choice(2) - 1
+                for offset in range(1, len(image_pool)):
+                    tentative_im_idx = (im_idx + (random_direction * offset)) % len(image_pool)
+                    if not self.invalidate[obj, instance][resolution][tentative_im_idx]:
+                        im_idx = tentative_im_idx
+                        break
 
+            view_idx = image_pool[im_idx]
 
+            impath = osp.join(self.ROOT, obj, instance, 'images', f'frame{view_idx:06d}.jpg')
+
+            # load camera params
+            input_metadata = np.load(impath.replace('jpg', 'npz'))
+            camera_pose = input_metadata['camera_pose'].astype(np.float32)
+            intrinsics = input_metadata['camera_intrinsics'].astype(np.float32)
+
+            rgb_image = imread_cv2(impath)
+            depthmap = imread_cv2(impath.replace('images', 'depths') + '.geometric.png', cv2.IMREAD_UNCHANGED)
+            depthmap = (depthmap.astype(np.float32) / 65535) * np.nan_to_num(input_metadata['maximum_depth'])
+
+            if mask_bg:
+                # load object mask
+                maskpath = osp.join(self.ROOT, obj, instance, 'masks', f'frame{view_idx:06d}.png')
+                maskmap = imread_cv2(maskpath, cv2.IMREAD_UNCHANGED).astype(np.float32)
+                maskmap = (maskmap / 255.0) > 0.1
+
+                # update the depthmap with mask
+                depthmap *= maskmap
+                            
+            rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
+                rgb_image, depthmap, intrinsics, resolution, rng=rng, info=impath)
+
+            num_valid = (depthmap > 0.0).sum()
+            if num_valid == 0:
+                # problem, invalidate image and retry
+                self.invalidate[obj, instance][resolution][im_idx] = True
+                imgs_idxs.appendleft(im_idx)
+                continue
+
+            if input_metadata['maximum_depth'] > max_depth_max:
+                max_depth_max = input_metadata['maximum_depth']
+            
+            if input_metadata['maximum_depth'] < max_depth_min:
+                max_depth_min = input_metadata['maximum_depth']
+            
+            if max_depth_first is None:
+                max_depth_first = input_metadata['maximum_depth']
+            
+            
+            
+            views.append(dict(
+                img=rgb_image,
+                depthmap=depthmap,
+                camera_pose=camera_pose,
+                camera_intrinsics=intrinsics,
+                dataset='Co3d_v2',
+                label=osp.join(obj, instance),
+                instance=osp.split(impath)[1]
+            ))
+
+        if max_depth_max / max_depth_min > 100. or max_depth_max / max_depth_first > 10.:
+            new_idx = rng.integers(0, self.__len__()-1)
+            return self.get_views_flexible_order(new_idx, resolution, rng)
+        
+        return views

@@ -90,6 +90,24 @@ class DTU(BaseManyViewDataset):
 
         return intrinsic, extrinsic
     
+    def sample_pairs(self, pairs_path, seq_id):
+        
+        cluster_lines = open(pairs_path).read().splitlines()
+        ref_idx = int(cluster_lines[2 * seq_id + 1])
+        
+        cluster_info =  cluster_lines[2 * seq_id + 2].split() 
+        list_idx = [] 
+        
+        list_idx.append('{:08d}.jpg'.format(ref_idx))
+        
+        for cidx in range(self.num_frames):
+            list_idx.append('{:08d}.jpg'.format(int(cluster_info[2 * cidx + 1])))
+        
+        list_idx.reverse()
+        
+        
+        return list_idx
+    
     def _get_views(self, idx, resolution, rng): 
         scene_id = self.scene_list[idx // self.num_seq]
         seq_id = idx % self.num_seq
@@ -154,6 +172,14 @@ class DTU(BaseManyViewDataset):
 
         return views
 
+    def sample_frame_idx(self, img_idxs, rng, full_video=False):
+        if full_video:
+            return img_idxs[::self.kf_every]
+        else:
+            return rng.sample(img_idxs, self.num_frames)
+    
+    def _crop_resize_if_necessary(self, rgb_image, depthmap, intrinsics, resolution, rng, info):
+        # Implement the necessary logic to crop and resize the images if needed
+        # This is a placeholder implementation
+        return rgb_image, depthmap, intrinsics
 
-    
-    

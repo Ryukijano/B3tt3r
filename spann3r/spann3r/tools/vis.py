@@ -7,7 +7,12 @@ import os.path as osp
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
-from spann3r.model import Spann3R
+
+import open3d as o3d
+import os
+import numpy as np
+import imageio
+import os.path as osp
 
 def render_frames(pts_all, image_all, camera_parameters, output_dir, mask=None, save_video=True, save_camera=True):
     t, h, w, _ = pts_all.shape
@@ -66,7 +71,27 @@ def render_frames(pts_all, image_all, camera_parameters, output_dir, mask=None, 
 
     vis.destroy_window()
 
-def find_render_cam(pcd):
+def draw_camera(c2w, cam_width=0.32/2, cam_height=0.24/2, f=0.10, color=[0, 1, 0], show_axis=True):
+    points = [[0, 0, 0], [-cam_width, -cam_height, f], [cam_width, -cam_height, f],
+              [cam_width, cam_height, f], [-cam_width, cam_height, f]]
+    lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [2, 3], [3, 4], [4, 1]]
+    colors = [color for i in range(len(lines))]
+
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(points)
+    line_set.lines = o3d.utility.Vector2iVector(lines)
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+    line_set.transform(c2w)
+
+    if show_axis:
+        axis = o3d.geometry.TriangleMesh.create_coordinate_frame()
+        axis.scale(min(cam_width, cam_height), np.array([0., 0., 0.]))
+        axis.transform(c2w)
+        return [line_set, axis]
+    else:
+        return [line_set]
+
+def find_render_cam(pcd, poses_all=None, cam_width=0.016, cam_height=0.012, cam_f=0.02):
     last_camera_params = None
 
     def print_camera_pose(vis):
@@ -85,6 +110,10 @@ def find_render_cam(pcd):
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window(width=1920, height=1080)
     vis.add_geometry(pcd)
+    if poses_all is not None:
+        for pose in poses_all:
+            for geometry in draw_camera(pose, cam_width, cam_height, cam_f):
+                vis.add_geometry(geometry)
 
     opt = vis.get_render_option()
     opt.point_size = 1
@@ -140,6 +169,8 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
         if save_video:
             pts_writer.append_data(pt_vis_rgb_uint8)
 
+        
+
         if images_all is not None:
             image = images_all[frame_id]
             image_uint8 = (image * 255).astype(np.uint8)
@@ -164,3 +195,38 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
             imgs_writer.close()
         if conf_all is not None:
             conf_writer.close()
+
+def visualize_spatial_memory(spatial_memory, save_path, save_video=True):
+    # Create a directory to save the visualizations
+    os.makedirs(save_path, exist_ok=True)
+
+    # Extract the point clouds and images from the spatial memory
+    pts_all = spatial_memory['points']
+    images_all = spatial_memory['images']
+    conf_all = spatial_memory.get('confidence', None)
+
+    # Visualize the predicted points and images
+    vis_pred_and_imgs(pts_all, save_path, images_all, conf_all, save_video)
+
+def visualize_flexible_image_order(image_sequences, save_path, save_video=True):
+    # Create a directory to save the visualizations
+    os.makedirs(save_path, exist_ok=True)
+
+    # Iterate through the image sequences and visualize them
+    for i, image_sequence in enumerate(image_sequences):
+        sequence_save_path = osp.join(save_path, f'sequence_{i:03d}')
+        os.makedirs(sequence_save_path, exist_ok=True)
+
+        # Save the images in the sequence
+        for j, image in enumerate(image_sequence):
+            image_uint8 = (image * 255).astype(np.uint8)
+            imageio.imwrite(osp.join(sequence_save_path, f'image_{j:03d}.png'), image_uint8)
+
+        # Optionally save the sequence as a video
+        if save_video:
+            video_path = osp.join(sequence_save_path, 'sequence.mp4')
+            writer = imageio.get_writer(video_path, fps=10)
+            for image in image_sequence:
+                image_uint8 = (image * 255).astype(np.uint8)
+                writer.append_data(image_uint8)
+            writer.close()

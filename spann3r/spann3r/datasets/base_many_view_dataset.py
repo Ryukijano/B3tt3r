@@ -50,4 +50,10 @@ class BaseManyViewDataset(BaseStereoViewDataset):
         return img_idxs
 
 
-    
+    def load_dataset(self, dataset_path, img_order=None):
+        # Load dataset and handle images in any order
+        pass
+
+    def preprocess_images(self, images):
+        # Preprocess images for spatial memory
+        pass

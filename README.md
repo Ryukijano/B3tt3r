@@ -5,6 +5,10 @@ A 3-D reconstruction paradigm combining Mast3r and Spann3r models to make it B3t
 
 This repository demonstrates how to combine the Mast3r and Spann3r models for 3D reconstruction. The Mast3r model is used for feature extraction and initial 3D point cloud generation, while the Spann3r model is used for refining the 3D reconstruction using spatial memory.
 
+## Introducing Bett3r
+
+Bett3r is an extension of the Mast3r model that incorporates spatial memory features similar to Spann3r. Unlike Spann3r, Bett3r does not confine images to a certain order or require photogrammetry. This flexibility allows for more versatile and efficient 3D reconstruction.
+
 ### Prerequisites
 
 - Python 3.8 or higher
@@ -29,16 +33,16 @@ This repository demonstrates how to combine the Mast3r and Spann3r models for 3D
 
 #### Training
 
-To train the combined Mast3r and Spann3r models, run the following command:
+To train the combined Mast3r and Bett3r models, run the following command:
 ```bash
-python spann3r/training.py --config configs/train_config.yaml
+python bett3r/training.py --config configs/train_config.yaml
 ```
 
 #### Evaluation
 
 To evaluate the combined model, run the following command:
 ```bash
-python spann3r/evaluate.py --config configs/eval_config.yaml
+python bett3r/evaluate.py --config configs/eval_config.yaml
 ```
 
 ### Example
@@ -47,14 +51,14 @@ Here is an example of how to use the combined model for 3D reconstruction:
 
 ```python
 import torch
-from spann3r.model import Spann3R
-from spann3r.datasets import load_dataset
+from bett3r.model import Bett3r
+from bett3r.datasets import load_dataset
 
 # Load the dataset
 dataset = load_dataset('path/to/dataset')
 
 # Initialize the model
-model = Spann3R()
+model = Bett3r()
 
 # Set the model to evaluation mode
 model.eval()

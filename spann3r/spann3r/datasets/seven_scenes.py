@@ -141,14 +141,3 @@ class SevenScenes(BaseManyViewDataset):
                 instance=osp.split(impath)[1],
             ))
         return views
-
-
-
-
-
-
-
-                    
-
-
-

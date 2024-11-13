@@ -133,10 +133,8 @@ class NRGBD(BaseManyViewDataset):
 
         return views
 
-            
-
-
-
-
-
-        
+    def sample_frame_idx(self, img_idxs, rng, full_video=False):
+        if full_video:
+            return img_idxs
+        else:
+            return rng.sample(img_idxs, self.num_frames)
