@@ -35,9 +35,9 @@ class CroCoNet(nn.Module):
                  norm_im2_in_dec=True,   # whether to apply normalization of the 'memory' = (second image) in the decoder 
                  pos_embed='cosine',     # positional embedding (either cosine or RoPE100)
                 ):
-                
+
         super(CroCoNet, self).__init__()
-                
+
         # patch embeddings  (with initialization done as in MAE)
         self._set_patch_embed(img_size, patch_size, enc_embed_dim)
 
@@ -70,16 +70,16 @@ class CroCoNet(nn.Module):
             Block(enc_embed_dim, enc_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer, rope=self.rope)
             for i in range(enc_depth)])
         self.enc_norm = norm_layer(enc_embed_dim)
-        
+
         # masked tokens 
         self._set_mask_token(dec_embed_dim)
 
         # decoder 
         self._set_decoder(enc_embed_dim, dec_embed_dim, dec_num_heads, dec_depth, mlp_ratio, norm_layer, norm_im2_in_dec)
-        
+
         # prediction head 
         self._set_prediction_head(dec_embed_dim, patch_size)
-        
+
         # initializer weights
         self.initialize_weights()           
 
@@ -88,10 +88,10 @@ class CroCoNet(nn.Module):
 
     def _set_mask_generator(self, num_patches, mask_ratio):
         self.mask_generator = RandomMask(num_patches, mask_ratio)
-        
+
     def _set_mask_token(self, dec_embed_dim):
         self.mask_token = nn.Parameter(torch.zeros(1, 1, dec_embed_dim))
-        
+
     def _set_decoder(self, enc_embed_dim, dec_embed_dim, dec_num_heads, dec_depth, mlp_ratio, norm_layer, norm_im2_in_dec):
         self.dec_depth = dec_depth
         self.dec_embed_dim = dec_embed_dim
@@ -103,11 +103,11 @@ class CroCoNet(nn.Module):
             for i in range(dec_depth)])
         # final norm layer 
         self.dec_norm = norm_layer(dec_embed_dim)
-        
+
     def _set_prediction_head(self, dec_embed_dim, patch_size):
          self.prediction_head = nn.Linear(dec_embed_dim, patch_size**2 * 3, bias=True)
-        
-        
+
+
     def initialize_weights(self):
         # patch embed 
         self.patch_embed._init_weights()
@@ -125,7 +125,7 @@ class CroCoNet(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
-            
+
     def _encode_image(self, image, do_mask=False, return_all_blocks=False):
         """
         image has B x 3 x img_size x img_size 
@@ -162,13 +162,13 @@ class CroCoNet(nn.Module):
                 x = blk(x, posvis)
             x = self.enc_norm(x)
             return x, pos, masks
- 
+
     def _decoder(self, feat1, pos1, masks1, feat2, pos2, return_all_blocks=False):
         """
-        return_all_blocks: if True, return the features at the end of every block 
+        return_all_blocks: if True, return the features at the end of every block
                            instead of just the features from the last block (eg for some prediction heads)
-                           
-        masks1 can be None => assume image1 fully visible 
+
+        masks1 can be None => assume image1 fully visible
         """
         # encoder to decoder layer 
         visf1 = self.decoder_embed(feat1)
@@ -212,7 +212,7 @@ class CroCoNet(nn.Module):
         x = imgs.reshape(shape=(imgs.shape[0], 3, h, p, w, p))
         x = torch.einsum('nchpwq->nhwpqc', x)
         x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * 3))
-        
+
         return x
 
     def unpatchify(self, x, channels=3):
@@ -232,9 +232,9 @@ class CroCoNet(nn.Module):
         """
         img1: tensor of size B x 3 x img_size x img_size
         img2: tensor of size B x 3 x img_size x img_size
-        
+
         out will be    B x N x (3*patch_size*patch_size)
-        masks are also returned as B x N just in case 
+        masks are also returned as B x N just in case
         """
         # encoder of the masked first image 
         feat1, pos1, mask1 = self._encode_image(img1, do_mask=True)

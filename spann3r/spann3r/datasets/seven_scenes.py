@@ -15,7 +15,7 @@ class SevenScenes(BaseManyViewDataset):
                  test_id=None, full_video=False, 
                  tuple_path=None, seq_id=None,
                  kf_every=1, *args, ROOT, **kwargs):
-        
+
         self.ROOT = ROOT
         super().__init__(*args, **kwargs)
         self.num_seq = num_seq
@@ -30,7 +30,7 @@ class SevenScenes(BaseManyViewDataset):
          # load all scenes
         self.load_all_tuples(tuple_path)
         self.load_all_scenes(ROOT)
-    
+
     def __len__(self):
         if self.tuple_list is not None:
             return len(self.tuple_list)
@@ -40,12 +40,12 @@ class SevenScenes(BaseManyViewDataset):
         if tuple_path is not None:
             with open(tuple_path) as f:
                 self.tuple_list = f.read().splitlines()
-        
+
         else:
             self.tuple_list = None
-    
+
     def load_all_scenes(self, base_dir):
-        
+
         if self.tuple_list is not None:
             # Use pre-defined simplerecon scene_ids
             self.scene_list = ['stairs/seq-06', 'stairs/seq-02', 
@@ -57,11 +57,11 @@ class SevenScenes(BaseManyViewDataset):
                                'fire/seq-01']
             print(f"Found {len(self.scene_list)} sequences in split {self.split}")
             return 
-            
+
         scenes = os.listdir(base_dir)
-        
+
         file_split = {'train': 'TrainSplit.txt', 'test': 'TestSplit.txt'}[self.split]
-        
+
         self.scene_list = []
         for scene in scenes:
             if self.test_id is not None and scene != self.test_id:
@@ -69,8 +69,8 @@ class SevenScenes(BaseManyViewDataset):
             # read file split
             with open(osp.join(base_dir, scene, file_split)) as f:
                 seq_ids = f.read().splitlines()
-                
-                
+
+
                 for seq_id in seq_ids:
                     # seq is string, take the int part and make it 01, 02, 03
                     # seq_id = 'seq-{:2d}'.format(int(seq_id))
@@ -79,10 +79,10 @@ class SevenScenes(BaseManyViewDataset):
                     if self.seq_id is not None and seq_id != self.seq_id:
                         continue
                     self.scene_list.append(f"{scene}/{seq_id}")
-        
-        
+
+
         print(f"Found {len(self.scene_list)} sequences in split {self.split}")
-    
+
 
     def _get_views(self, idx, resolution, rng):
 
@@ -91,7 +91,7 @@ class SevenScenes(BaseManyViewDataset):
             line = self.tuple_list[idx].split(" ")
             scene_id = line[0]
             img_idxs = line[1:]
-        
+
         else:
             scene_id = self.scene_list[idx // self.num_seq]
             seq_id = idx % self.num_seq
@@ -100,7 +100,7 @@ class SevenScenes(BaseManyViewDataset):
             num_files = len([name for name in os.listdir(data_path) if 'color' in name])
             img_idxs = [f'{i:06d}' for i in range(num_files)]
             img_idxs = self.sample_frame_idx(img_idxs, rng, full_video=self.full_video)
-        
+
         # Intrinsics used in SimpleRecon
         fx, fy, cx, cy = 525, 525, 320, 240
         intrinsics_ = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
@@ -125,12 +125,12 @@ class SevenScenes(BaseManyViewDataset):
             depthmap[depthmap>10] = 0
             depthmap[depthmap<1e-3] = 0
 
-            
+
             camera_pose = np.loadtxt(posepath).astype(np.float32)
 
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intrinsics_, resolution, rng=rng, info=impath)
-            
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,

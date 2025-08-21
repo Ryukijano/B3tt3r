@@ -80,8 +80,8 @@ def get_args_parser():
     add_arg('--dist_url', default='env://', help='url used to set up distributed training')
 
     return parser
-    
-        
+
+
 def main(args):
     misc.init_distributed_mode(args)
     global_rank = misc.get_rank()
@@ -136,13 +136,13 @@ def main(args):
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], static_graph=True)
         model_without_ddp = model.module
-    
+
     # following timm: set wd as 0 for bias and norm layers   
     param_groups = misc.get_parameter_groups(model_without_ddp, args.weight_decay)
     optimizer = eval(f"torch.optim.{args.optimizer}")
     print(optimizer)
     loss_scaler = NativeScaler()
-    
+
     # automatic restart
     last_ckpt_fname = os.path.join(args.output_dir, f'checkpoint-last.pth')
     args.resume = last_ckpt_fname if os.path.isfile(last_ckpt_fname) else None
@@ -158,7 +158,7 @@ def main(args):
         best_so_far = misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
     if best_so_far is None: best_so_far = np.inf
-    
+
     # tensorboard
     log_writer = None
     if global_rank == 0 and args.output_dir is not None:
@@ -196,14 +196,14 @@ def main(args):
         for val_dataset in val_datasets: print(repr(val_dataset))
         data_loaders_val = [DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=args.num_workers, pin_memory=True, drop_last=False) for val_dataset in val_datasets]
         bestmetric = ("AVG_" if len(data_loaders_val)>1 else str(data_loaders_val[0].dataset)+'_')+args.bestmetric
-       
+
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
     # Training Loop
     for epoch in range(args.start_epoch, args.epochs):
 
         if args.distributed: data_loader_train.sampler.set_epoch(epoch)
-            
+
         # Train
         epoch_start = time.time()
         train_stats = train_one_epoch(model, criterion, metrics, data_loader_train, optimizer, device, epoch, loss_scaler, log_writer=log_writer, args=args)
@@ -218,21 +218,21 @@ def main(args):
             val_epoch_time = time.time() - val_epoch_start
 
             val_best = val_stats[bestmetric]
-            
+
             # Save best of all
             if val_best <= best_so_far:
                 best_so_far = val_best
                 misc.save_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler, epoch=epoch, best_so_far=best_so_far, fname='best')
-        
+
             log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                          'epoch': epoch,
                          **{f'val_{k}': v for k, v in val_stats.items()}}
         else:
             log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                          'epoch': epoch,}
-                             
+
         if args.distributed: dist.barrier()
-        
+
         # Save stuff
         if args.output_dir and ((epoch+1) % args.save_every == 0 or epoch + 1 == args.epochs):
             misc.save_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler, epoch=epoch, best_so_far=best_so_far, fname='last')
@@ -242,11 +242,11 @@ def main(args):
                 log_writer.flush()
             with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
                 f.write(json.dumps(log_stats) + "\n")
-        
+
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    
+
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()

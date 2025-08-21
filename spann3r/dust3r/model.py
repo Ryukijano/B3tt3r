@@ -28,7 +28,7 @@ def load_model(model_path_or_url, device='cpu', landscape_only=False, verbose=Tr
     if verbose:
         print('... loading model from', model_path_or_url)
     is_url = urllib.parse.urlparse(model_path_or_url).scheme in ('http', 'https')
-    
+
     if is_url:
         ckpt = torch.hub.load_state_dict_from_url(model_path_or_url, map_location='cpu', progress=verbose)
     else:
@@ -133,15 +133,15 @@ class AsymmetricCroCo3DStereo (
         Params:
             - image: B x C x H x W
             - true_shape: B x 2 [[H1, W1], [H2, W2], ...]
-        
+
         Returns:
             - x: B x Npatches x D
             - pos: B x Npatches x 2
         '''
-        
+
         # embed the image into patches  (x has size B x Npatches x C)
         x, pos = self.patch_embed(image, true_shape=true_shape)
-        
+
 
         # add positional embedding without cls token
         assert self.enc_pos_embed is None

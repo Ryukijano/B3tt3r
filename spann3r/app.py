@@ -50,7 +50,7 @@ def load_ckpt(model_path_or_url, verbose=True):
     if verbose:
         print('... loading model from', model_path_or_url)
     is_url = urllib.parse.urlparse(model_path_or_url).scheme in ('http', 'https')
-    
+
     if is_url:
         ckpt = torch.hub.load_state_dict_from_url(model_path_or_url, map_location='cpu', progress=verbose)
     else:
@@ -60,7 +60,7 @@ def load_ckpt(model_path_or_url, verbose=True):
 def load_model(ckpt_path, device):
     model = Spann3R(dus3r_name=DEFAULT_DUST3R_PATH, 
                     use_feat=False).to(device)
-    
+
     model.load_state_dict(load_ckpt(ckpt_path)['model'])
     model.eval()
     return model
@@ -110,45 +110,45 @@ model = load_model(DEFAULT_CKPT_PATH, DEFAULT_DEVICE)
 def reconstruct(video_path, conf_thresh, kf_every, as_pointcloud=False):
     # Extract frames from video
     demo_path = extract_frames(video_path)
-    
+
     # Load dataset
     dataset = Demo(ROOT=demo_path, resolution=224, full_video=True, kf_every=kf_every)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
     batch = next(iter(dataloader))
-    
+
     for view in batch:
         view['img'] = view['img'].to(DEFAULT_DEVICE, non_blocking=True)
-    
+
     demo_name = os.path.basename(video_path)
     print(f'Started reconstruction for {demo_name}')
-    
+
     start = time.time()
     preds, preds_all = model.forward(batch)
     end = time.time()
     fps = len(batch) / (end - start)
     print(f'Finished reconstruction for {demo_name}, FPS: {fps:.2f}')
-    
+
     # Process results
     pts_all, images_all, conf_all = [], [], []
     for j, view in enumerate(batch):
         image = view['img'].permute(0, 2, 3, 1).cpu().numpy()[0]
         pts = preds[j]['pts3d' if j==0 else 'pts3d_in_other_view'].detach().cpu().numpy()[0]
         conf = preds[j]['conf'][0].cpu().data.numpy()
-        
+
         images_all.append((image[None, ...] + 1.0)/2.0)
         pts_all.append(pts[None, ...])
         conf_all.append(conf[None, ...])
-    
+
     images_all = np.concatenate(images_all, axis=0)
     pts_all = np.concatenate(pts_all, axis=0) * 10
     conf_all = np.concatenate(conf_all, axis=0)
-    
+
     # Create point cloud or mesh
     conf_sig_all = (conf_all-1) / conf_all
     mask = conf_sig_all > conf_thresh
-    
+
     scene = trimesh.Scene()
-    
+
     if as_pointcloud:
         pcd = trimesh.PointCloud(
             vertices=pts_all[mask].reshape(-1, 3),
@@ -161,18 +161,18 @@ def reconstruct(video_path, conf_thresh, kf_every, as_pointcloud=False):
             meshes.append(pts3d_to_trimesh(images_all[i], pts_all[i], mask[i]))
         mesh = trimesh.Trimesh(**cat_meshes(meshes))
         scene.add_geometry(mesh)
-    
+
     rot = np.eye(4)
     rot[:3, :3] = Rotation.from_euler('y', np.deg2rad(180)).as_matrix()
     scene.apply_transform(np.linalg.inv(OPENGL @ rot))
-    
+
     # Save the scene as GLB
     output_path = tempfile.mktemp(suffix='.glb')
     scene.export(output_path)
-    
+
     # Clean up temporary directory
     os.system(f"rm -rf {demo_path}")
-    
+
     return output_path, f"Reconstruction completed. FPS: {fps:.2f}"
 
 iface = gr.Interface(

@@ -220,7 +220,7 @@ def save_on_master(*args, **kwargs):
 
 
 def init_distributed_mode(args):
-    
+
     #### Hengyi: WORLD_SIZE is the number of GPUs used in the training
     # RANK is a unique identifier for each process in the distributed training
     # Local_rank is the GPU index of the current process
@@ -235,7 +235,7 @@ def init_distributed_mode(args):
     # Process (GPU) 1: RANK 5, LOCAL_RANK 1
     # Process (GPU) 2: RANK 6, LOCAL_RANK 2
     # Process (GPU) 3: RANK 7, LOCAL_RANK 3
-    
+
     nodist = args.nodist if hasattr(args,'nodist') else False 
     if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ and not nodist:
         args.rank = int(os.environ["RANK"])
@@ -368,7 +368,7 @@ def _replace(text, src, tgt, rm=''):
     for c in rm:
         text = text.replace(c,'')
     return text
-    
+
 def filename( obj ):
     """ transform a python obj or cmd into a proper filename. 
      - \1 gets replaced by slash '/'
@@ -412,7 +412,7 @@ def get_parameter_groups(model, weight_decay, layer_decay=1.0, skip_list=(), no_
         dec_depth = model.dec_depth if hasattr(model, 'dec_blocks') else 0
         num_layers = enc_depth+dec_depth
         layer_decay_values = list(layer_decay ** (num_layers + 1 - i) for i in range(num_layers + 2))
-        
+
     for name, param in model.named_parameters():
         if not param.requires_grad:
             continue  # frozen weights
@@ -463,17 +463,17 @@ def get_parameter_groups(model, weight_decay, layer_decay=1.0, skip_list=(), no_
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Decay the learning rate with half-cycle cosine after warmup"""
-    
+
     if epoch < args.warmup_epochs:
         lr = args.lr * epoch / args.warmup_epochs 
     else:
         lr = args.min_lr + (args.lr - args.min_lr) * 0.5 * \
             (1. + math.cos(math.pi * (epoch - args.warmup_epochs) / (args.epochs - args.warmup_epochs)))
-            
+
     for param_group in optimizer.param_groups:
         if "lr_scale" in param_group:
             param_group["lr"] = lr * param_group["lr_scale"]
         else:
             param_group["lr"] = lr
-            
+
     return lr

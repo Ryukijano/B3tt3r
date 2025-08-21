@@ -69,12 +69,12 @@ def get_args_parser():
 
 
 
-        
+
 def main(args):
     misc.init_distributed_mode(args)
     global_rank = misc.get_rank()
     world_size = misc.get_world_size()
-    
+
     print("output_dir: "+args.output_dir)
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)                         
@@ -113,13 +113,13 @@ def main(args):
         pin_memory=True,
         drop_last=True,
     )
-   
+
     ## model 
     print('Loading model: {:s}'.format(args.model))
     model = eval(args.model)
     print('Loading criterion: MaskedMSE(norm_pix_loss={:s})'.format(str(bool(args.norm_pix_loss))))
     criterion = MaskedMSE(norm_pix_loss=bool(args.norm_pix_loss))
-   
+
     model.to(device)
     model_without_ddp = model
     print("Model = %s" % str(model_without_ddp))
@@ -135,7 +135,7 @@ def main(args):
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True, static_graph=True)
         model_without_ddp = model.module
-    
+
     param_groups = misc.get_parameter_groups(model_without_ddp, args.weight_decay) # following timm: set wd as 0 for bias and norm layers
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95))
     print(optimizer)
@@ -153,19 +153,19 @@ def main(args):
     for epoch in range(args.start_epoch, args.max_epoch):
         if world_size>1:
             data_loader_train.sampler.set_epoch(epoch)
-            
+
         train_stats = train_one_epoch(
             model, criterion, data_loader_train,
             optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
             args=args
         )
-        
+
         if args.output_dir and epoch % args.save_freq == 0 :
             misc.save_model(
                 args=args, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=epoch, fname='last')
-                
+
         if args.output_dir and (epoch % args.keep_freq == 0 or epoch + 1 == args.max_epoch) and (epoch>0 or args.max_epoch==1):
             misc.save_model(
                 args=args, model_without_ddp=model_without_ddp, optimizer=optimizer,
@@ -245,8 +245,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-    
-    
+
+
 
 if __name__ == '__main__':
     args = get_args_parser()

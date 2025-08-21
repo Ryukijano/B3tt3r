@@ -31,7 +31,7 @@ def get_args_parser():
     parser.add_argument('--model', default="Spann3R(dus3r_name='./checkpoints/DUSt3R_ViTLarge_BaseDecoder_512_dpt.pth', use_feat=False, mem_pos_enc=False)",
                         type=str, help="string containing the model to build")
     parser.add_argument('--pretrained', default=None, help='path of a starting checkpoint')
-    
+
     # Loss
     parser.add_argument('--train_criterion', 
                         default="ConfLoss_t(Regr3D_t(L21, norm_mode='avg_dis', fix_first=False), alpha=0.4)",
@@ -45,10 +45,10 @@ def get_args_parser():
     parser.add_argument('--test_dataset', 
                         default="Scannetpp(split='val', ROOT='./data/scannetpp', resolution=224, num_seq=1, kf_every=10, seed=777, full_video=True) + 1000 @ Co3d(split='test', ROOT='./data/co3d_preprocessed_50', resolution=224, num_frames=5, mask_bg=False, seed=777)", 
                         type=str, help="testing set")
-    
+
      # Exp
     parser.add_argument('--seed', default=0, type=int, help="Random seed")
-    
+
     # Training
     parser.add_argument('--batch_size', default=2, type=int,
                         help="Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus")
@@ -57,7 +57,7 @@ def get_args_parser():
     parser.add_argument('--accum_iter', default=1, type=int,
                         help="Accumulate gradient iterations (for increasing the effective batch size under memory constraints)")
     parser.add_argument('--epochs', default=120, type=int, help="Maximum number of epochs for the scheduler")
-    
+
     parser.add_argument('--weight_decay', type=float, default=0.05, help="weight decay (default: 0.05)")
     parser.add_argument('--lr', type=float, default=5e-5, metavar='LR', help='learning rate (absolute lr)')
     parser.add_argument('--blr', type=float, default=1.5e-4, metavar='LR',
@@ -68,7 +68,7 @@ def get_args_parser():
 
     parser.add_argument('--amp', type=int, default=0,
                         choices=[0, 1], help="Use Automatic Mixed Precision for pretraining")
-    
+
     # others
     parser.add_argument('--num_workers', default=2, type=int)
     parser.add_argument('--num_workers_test', default=0, type=int)
@@ -83,14 +83,14 @@ def get_args_parser():
                         help='frequence (number of epochs) to save checkpoint in checkpoint-%d.pth')
     parser.add_argument('--print_freq', default=20, type=int,
                         help='frequence (number of iterations) to print infos while training')
-    
+
     parser.add_argument('--alpha_c2f', type=int, default=1, help='use alpha c2f')
-    
+
     # output dir 
     parser.add_argument('--output_dir', default='./output/all_alpha04_lr05', type=str, help="path where to save the output")
-    
+
     return parser
-    
+
 @torch.no_grad()
 def test_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                    data_loader: Sized, device: torch.device, epoch: int,
@@ -108,9 +108,9 @@ def test_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         data_loader.dataset.set_epoch(epoch)
     if hasattr(data_loader, 'sampler') and hasattr(data_loader.sampler, 'set_epoch'):
         data_loader.sampler.set_epoch(epoch)
-    
+
     save_path = os.path.join(args.output_dir, f'eval_{epoch}')
-        
+
     os.makedirs(save_path, exist_ok=True)
 
     for i, batch in enumerate(metric_logger.log_every(data_loader, args.print_freq, header)):
@@ -119,10 +119,10 @@ def test_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                 if name not in view:
                     continue
                 view[name] = view[name].to(device, non_blocking=True)
-        
-        
+
+
         preds, preds_all = model.forward(batch)
-        
+
         if i < 100:
             images_all = []
             pts_all = []
@@ -130,14 +130,14 @@ def test_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                 img_idx = 0
                 mask = view['depthmap'][img_idx:img_idx+1].cpu().numpy()!=0
                 image = view['img'][img_idx:img_idx+1].permute(0, 2, 3, 1).cpu().numpy()[mask].reshape(-1, 3)
-                
+
                 pts = preds[j]['pts3d' if j==0 else 'pts3d_in_other_view'][img_idx:img_idx+1].detach().cpu().numpy()
                 pts = pts[mask].reshape(-1, 3)
-                
+
                 images_all.append(image)
                 pts_all.append(pts)
             images_all = np.concatenate(images_all, axis=0)
-            
+
 
 
             pts_all = np.concatenate(pts_all, axis=0)
@@ -147,11 +147,11 @@ def test_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             pcd.points = o3d.utility.Vector3dVector(pts_all.reshape(-1, 3))
             pcd.colors = o3d.utility.Vector3dVector((images_all.reshape(-1, 3)+1.0)/2.0)
             o3d.io.write_point_cloud(os.path.join(save_path, view['dataset'][0]+f"_idx_{i}.ply"), pcd)
-            
-        
+
+
         loss, loss_details, loss_factor = criterion.compute_frame_loss(batch, preds_all)
         loss_value = float(loss)
-        
+
         metric_logger.update(loss=float(loss_value), **loss_details)
 
     # gather the stats from all processes
@@ -187,7 +187,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         data_loader.dataset.set_epoch(epoch)
     if hasattr(data_loader, 'sampler') and hasattr(data_loader.sampler, 'set_epoch'):
         data_loader.sampler.set_epoch(epoch)
-        
+
     epoch_ratio = epoch/args.epochs
     if epoch_ratio < 0.75:
         active_ratio = min(1, epoch/args.epochs*2.0)
@@ -195,8 +195,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         active_ratio = max(0.5, 1 - (epoch_ratio - 0.75) / 0.25)
     data_loader.dataset.set_ratio(active_ratio)
     #print(f"active thresh: {data_loader.datasets.dataset.active_thresh}")
-    
-    
+
+
     optimizer.zero_grad()
 
     for data_iter_step, batch in enumerate(metric_logger.log_every(data_loader, args.print_freq, header)):
@@ -205,14 +205,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         # we use a per iteration (instead of per epoch) lr scheduler
         if data_iter_step % accum_iter == 0:
             misc.adjust_learning_rate(optimizer, epoch_f, args)
-        
+
         for view in batch:
             for name in 'img pts3d valid_mask camera_pose camera_intrinsics F_matrix corres'.split():  # pseudo_focal
                 if name not in view:
                     continue
                 view[name] = view[name].to(device, non_blocking=True)
-        
-        
+
+
         preds, preds_all = model.forward(batch)
         loss, loss_details, loss_factor = criterion.compute_frame_loss(batch, preds_all)
         loss += loss_factor     
@@ -226,7 +226,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         loss /= accum_iter
         norm = loss_scaler(loss, optimizer, parameters=model.parameters(),
                     update_grad=(data_iter_step + 1) % accum_iter == 0, clip_grad=1.0) # 
-        
+
         if (data_iter_step + 1) % accum_iter == 0:
             optimizer.zero_grad()
 
@@ -267,17 +267,17 @@ def train(args):
     print("output_dir: "+args.output_dir)
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    
+
     # auto resume
     last_ckpt_fname = os.path.join(args.output_dir, f'checkpoint-last.pth')
     args.resume = last_ckpt_fname if os.path.isfile(last_ckpt_fname) else None
-    
+
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
-    
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
-    
+
     # fix the seed
     seed = args.seed + misc.get_rank()
     torch.manual_seed(seed)
@@ -290,16 +290,16 @@ def train(args):
 
     data_loader_test = {dataset.split('(')[0]: build_dataset(dataset, args.batch_size_test, args.num_workers_test, test=True)
                         for dataset in args.test_dataset.split('+')}
-    
+
     print('Loading model: {:s}'.format(args.model))
     model = eval(args.model)
-    
+
     print(f'>> Creating train criterion = {args.train_criterion}')
     train_criterion = eval(args.train_criterion).to(device)
     test_criterion = eval(args.test_criterion).to(device)
 
     alpha_init = train_criterion.alpha
-    
+
     model.to(device)
     model_without_ddp = model
     print("Model = %s" % str(model_without_ddp))
@@ -309,8 +309,8 @@ def train(args):
         ckpt = torch.load(args.pretrained, map_location=device)
         print(model.load_state_dict(ckpt['model'], strict=False))
         del ckpt  # in case it occupies memory
-    
-    
+
+
     eff_batch_size = args.batch_size * args.accum_iter * misc.get_world_size()
     if args.lr is None:  # only base_lr is specified
         args.lr = args.blr * eff_batch_size / 256
@@ -318,16 +318,16 @@ def train(args):
     print("actual lr: %.2e" % args.lr)
     print("accumulate grad iterations: %d" % args.accum_iter)
     print("effective batch size: %d" % eff_batch_size)
-    
+
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[args.gpu], find_unused_parameters=True, static_graph=True)
         model_without_ddp = model.module
-    
+
     param_groups = misc.get_parameter_groups(model_without_ddp, args.weight_decay)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95))
     print(optimizer)
-    
+
     loss_scaler = NativeScaler()
 
     def write_log_stats(epoch, train_stats, test_stats):
@@ -343,11 +343,11 @@ def train(args):
 
             with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
                 f.write(json.dumps(log_stats) + "\n")
-    
+
     def save_model(epoch, fname, best_so_far):
         misc.save_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer,
                         loss_scaler=loss_scaler, epoch=epoch, fname=fname, best_so_far=best_so_far)
-    
+
     best_so_far = misc.load_model(args=args, model_without_ddp=model_without_ddp,
                                   optimizer=optimizer, loss_scaler=loss_scaler)
     if best_so_far is None:
@@ -356,15 +356,15 @@ def train(args):
         log_writer = SummaryWriter(log_dir=args.output_dir)
     else:
         log_writer = None
-    
+
     file_path_all =[ './']
-        
+
     os.makedirs(os.path.join(args.output_dir, 'recording'), exist_ok=True)
-    
+
     for file_path in file_path_all:
         cur_dir = os.path.join(args.output_dir, 'recording', file_path)
         os.makedirs(cur_dir, exist_ok=True)
-        
+
         files = os.listdir(file_path)
         for f_name in files:
             if f_name[-3:] == '.py':
@@ -375,12 +375,12 @@ def train(args):
     start_time = time.time()
     train_stats = test_stats = {}
     for epoch in range(args.start_epoch, args.epochs+1):
-        
+
         # TODO: Save last check point
         if epoch > args.start_epoch:
             if args.save_freq and epoch % args.save_freq == 0 or epoch == args.epochs:
                 save_model(epoch-1, 'last', best_so_far)
-        
+
         # Test on multiple datasets
         new_best = False
         if (epoch > 0 and args.eval_freq > 0 and epoch % args.eval_freq == 0):
@@ -397,29 +397,29 @@ def train(args):
 
         # Save more stuff
         write_log_stats(epoch, train_stats, test_stats)
-        
+
         if epoch > args.start_epoch:
             if args.keep_freq and epoch % args.keep_freq == 0:
                 save_model(epoch-1, str(epoch), best_so_far)
             if new_best:
                 save_model(epoch-1, 'best', best_so_far)
-            
+
         if epoch >= args.epochs:
             break 
 
         if args.alpha_c2f:
             train_criterion.alpha = alpha_init - 0.2 * max((epoch - 0.5 * args.epochs) / (0.5 * args.epochs), 0)
             print('Update alpha to', train_criterion.alpha)
-        
+
         train_stats = train_one_epoch(
             model, train_criterion, data_loader_train,
             optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
             args=args)
-    
+
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
 
-    
+

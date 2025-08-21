@@ -13,7 +13,7 @@ class Demo(BaseManyViewDataset):
                  min_thresh=10, max_thresh=100,
                  full_video=True, kf_every=1, 
                  *args, ROOT, **kwargs):
-        
+
         self.ROOT = ROOT
         super().__init__(*args, **kwargs)
 
@@ -23,12 +23,12 @@ class Demo(BaseManyViewDataset):
         self.min_thresh = min_thresh
         self.full_video = full_video
         self.kf_every = kf_every
-    
+
     def __len__(self):
         return self.num_seq
-    
+
     def _get_views(self, idx, resolution, rng):
-        
+
         img_idxs = sorted(os.listdir(self.ROOT))
         valid_extensions = {'.jpg', '.jpeg', '.png', '.heic'}
         img_idxs = [idx for idx in img_idxs 
@@ -59,7 +59,7 @@ class Demo(BaseManyViewDataset):
                 rgb_image = np.array(rgb_image)
             else:
                 rgb_image = imread_cv2(impath)
-            
+
 
             depth_path = impath.split('.')[0] + '_depth.png'
             meta_data_path = impath.split('.')[0] + '.npz'
@@ -74,7 +74,7 @@ class Demo(BaseManyViewDataset):
 
                 # pseudo camera pose
                 camera_pose = np.eye(4).astype(np.float32)
-            
+
             if not osp.exists(depth_path):
                 depthmap = np.ones((rgb_image.shape[0], rgb_image.shape[1])).astype(np.float32)
             else:

@@ -64,7 +64,7 @@ def get_transform_json(H, W, focal, poses_all, ply_file_path, ori_path=None):
             'transform_matrix': pose.tolist()
         }
         frames.append(frame)
-    
+
     transform_dict['frames'] = frames
     transform_dict['ply_file_path'] = ply_file_path
 
@@ -79,7 +79,7 @@ def main(args):
     ##### Load model
     model = Spann3R(dus3r_name='./checkpoints/DUSt3R_ViTLarge_BaseDecoder_512_dpt.pth', 
                 use_feat=False).to(args.device)
-    
+
     model.load_state_dict(torch.load(args.ckpt_path, map_location=args.device)['model'])
     model.eval()
 
@@ -92,7 +92,7 @@ def main(args):
     ##### Inference
     for view in batch:
          view['img'] = view['img'].to(args.device, non_blocking=True)
-           
+
 
     demo_name = args.demo_path.split("/")[-1]
 
@@ -115,7 +115,7 @@ def main(args):
         pairs = make_pairs(imgs_all, scene_graph=args.scenegraph_type, prefilter=None, symmetrize=True)
         output = inference(pairs, model.dust3r, args.device, batch_size=2, verbose=True)
         preds, preds_all, idx_used = model.offline_reconstruction(batch, output) 
-        
+
         end = time.time()
 
         ordered_batch = [batch[i] for i in idx_used]
@@ -124,9 +124,9 @@ def main(args):
         preds, preds_all = model.forward(batch) 
         end = time.time()
         ordered_batch = batch
-        
+
     fps = len(batch) / (end - start)
-    
+
 
     print(f'Finished reconstruction for {demo_name}, FPS: {fps:.2f}')
 
@@ -156,7 +156,7 @@ def main(args):
 
 
     for j, view in enumerate(ordered_batch):
-        
+
         image = view['img'].permute(0, 2, 3, 1).cpu().numpy()[0]
         mask = view['valid_mask'].cpu().numpy()[0]
 
@@ -174,7 +174,7 @@ def main(args):
             points_2d.reshape(-1, 2).astype(np.float32), 
             intrinsic.astype(np.float32), 
             dist_coeffs)
-    
+
         rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
 
         # Extrinsic parameters (4x4 matrix)
@@ -187,7 +187,7 @@ def main(args):
         pts_gt_all.append(pts_gt[None, ...])
         masks_all.append(mask[None, ...])
         conf_all.append(conf[None, ...])
-    
+
     images_all = np.concatenate(images_all, axis=0)
     pts_all = np.concatenate(pts_all, axis=0)
     pts_gt_all = np.concatenate(pts_gt_all, axis=0)
@@ -204,7 +204,7 @@ def main(args):
         poses_all=poses_all,
         intrinsic=intrinsic,
         )
-    
+
     np.save(os.path.join(save_demo_path, f"{demo_name}.npy"), save_params)
 
 
@@ -222,7 +222,7 @@ def main(args):
 
         render_frames(pts_all, images_all, camera_parameters, save_demo_path, mask=conf_sig_all>args.conf_thresh)
         vis_pred_and_imgs(pts_all, save_demo_path, images_all=images_all, conf_all=conf_sig_all)
-    
+
     # Save transform.json
     if args.save_ori:
         scale_factor = ordered_batch[0]['camera_intrinsics'][0, 0, 0]
@@ -241,11 +241,11 @@ def main(args):
                                             ori_path=paths_all)
 
 
-        
-    
+
+
     else:
         transform_dict = get_transform_json(H, W, focal, poses_all, f"{demo_name}_conf{args.conf_thresh}.ply")
-    
+
 
     # Save to json
     with open(os.path.join(save_demo_path, 'transforms.json'), 'w') as f:

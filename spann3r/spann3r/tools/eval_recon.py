@@ -35,7 +35,7 @@ def completion(gt_points, rec_points, gt_normals=None, rec_normals=None):
         normal_dot = np.abs(normal_dot)
 
         return comp, comp_median, np.mean(normal_dot), np.median(normal_dot)
-    
+
     return comp, comp_median
 
 def compute_iou(pred_vox, target_vox):

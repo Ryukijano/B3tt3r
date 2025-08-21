@@ -107,8 +107,8 @@ class BaseStereoViewDataset (EasyDataset):
                 res, err_msg = is_good_type(key, val)
                 assert res, f"{err_msg} with {key}={val} for view {view_name(view)}"
             K = view['camera_intrinsics']
-        
-        
+
+
 
         # last thing done!
         for view in views:
@@ -127,8 +127,8 @@ class BaseStereoViewDataset (EasyDataset):
 
         if not isinstance(resolutions, list):
             resolutions = [resolutions]
-            
-            
+
+
         self._resolutions = []
         for resolution in resolutions:
             if isinstance(resolution, int):
@@ -152,13 +152,13 @@ class BaseStereoViewDataset (EasyDataset):
         # cropping centered on the principal point
         W, H = image.size
         cx, cy = intrinsics[:2, 2].round().astype(int)
-        
+
         # calculate min distance to margin
         min_margin_x = min(cx, W-cx)
         min_margin_y = min(cy, H-cy)
         assert min_margin_x > W/5, f'Bad principal point in view={info}'
         assert min_margin_y > H/5, f'Bad principal point in view={info}'
-        
+
         ## Center crop
         # Crop on the principal point, make it always centered
         # the new window will be a rectangle of size (2*min_margin_x, 2*min_margin_y) centered on (cx,cy)
@@ -182,7 +182,7 @@ class BaseStereoViewDataset (EasyDataset):
         target_resolution = np.array(resolution)
         if self.aug_crop > 1:
             target_resolution += rng.integers(0, self.aug_crop)
-        
+
         ## Recale with max factor, so  one of width or height might be larger than target_resolution
         image, depthmap, intrinsics = cropping.rescale_image_depthmap(image, depthmap, intrinsics, target_resolution)
 

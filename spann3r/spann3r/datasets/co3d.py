@@ -22,7 +22,7 @@ class Co3d(BaseManyViewDataset):
 
         assert mask_bg in (True, False, 'rand')
         self.mask_bg = mask_bg
-    
+
         self.num_seq = num_seq
         self.num_frames = num_frames
         self.max_thresh = max_thresh
@@ -36,7 +36,7 @@ class Co3d(BaseManyViewDataset):
 
         self.combinations, self.num_seq = self.get_combinations(use_comb, lb, ub)
         self.invalidate = {scene: {} for scene in self.scene_list}
-    
+
 
     def get_combinations(self, use_comb, lb, ub):
 
@@ -49,34 +49,34 @@ class Co3d(BaseManyViewDataset):
         else:
             combinations = None
             num_seq = self.num_seq
-        
+
         return combinations, num_seq
 
-    
+
 
     def load_scene(self, scene_class=None, scene_id=None):
         print('Loading scenes')
         with open(osp.join(self.ROOT, f'selected_seqs_{self.split}.json'), 'r') as f:
             scenes = json.load(f)
-            
+
             if scene_class is not None:
                 scenes = {k: v for k, v in scenes.items() if k == scene_class}
             else:
                 scenes = {k: v for k, v in scenes.items() if len(v) > 0} # k is class (apple), v is corresponding list
-            
+
             if scene_id is not None:
                 scenes = {(k, k2): v2 for k, v in scenes.items() for k2, v2 in v.items() if k2 == scene_id}
             else:
                 scenes = {(k, k2): v2 for k, v in scenes.items() 
                             for k2, v2 in v.items()} # k is class (apple), k2 is instance (110_13051_23361), v2 is list of image idx
         scene_list = list(scenes.keys())
-        
+
         return scenes, scene_list
-    
+
     def __len__(self):
 
         return len(self.scene_list) * self.num_seq
-    
+
     def _get_views(self, idx, resolution, rng, attempts=0):
         obj, instance = self.scene_list[idx // self.num_seq]
         image_pool = self.scenes[obj, instance]
@@ -90,19 +90,19 @@ class Co3d(BaseManyViewDataset):
         else:
             img_idx = range(0, len(image_pool))
             imgs_idxs = self.sample_frames(img_idx, rng)
-        
+
 
         if resolution not in self.invalidate[obj, instance]:  # flag invalid images
             self.invalidate[obj, instance][resolution] = [False for _ in range(len(image_pool))]
-        
+
         mask_bg = (self.mask_bg == True) or (self.mask_bg == 'rand' and rng.choice(2))
-       
+
         imgs_idxs = deque(imgs_idxs)
 
         max_depth_min = 1e8
         max_depth_max = 0.      
         max_depth_first = None  
-        
+
 
         views = []
 
@@ -139,7 +139,7 @@ class Co3d(BaseManyViewDataset):
 
                 # update the depthmap with mask
                 depthmap *= maskmap
-                            
+
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intrinsics, resolution, rng=rng, info=impath)
 
@@ -152,15 +152,15 @@ class Co3d(BaseManyViewDataset):
 
             if input_metadata['maximum_depth'] > max_depth_max:
                 max_depth_max = input_metadata['maximum_depth']
-            
+
             if input_metadata['maximum_depth'] < max_depth_min:
                 max_depth_min = input_metadata['maximum_depth']
-            
+
             if max_depth_first is None:
                 max_depth_first = input_metadata['maximum_depth']
-            
-            
-            
+
+
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,
@@ -174,7 +174,7 @@ class Co3d(BaseManyViewDataset):
         if max_depth_max / max_depth_min > 100. or max_depth_max / max_depth_first > 10.:
             new_idx = rng.integers(0, self.__len__()-1)
             return self._get_views(new_idx, resolution, rng)
-        
+
         return views
 
     def get_views_flexible_order(self, idx, resolution, rng, attempts=0):
@@ -186,15 +186,15 @@ class Co3d(BaseManyViewDataset):
 
         if resolution not in self.invalidate[obj, instance]:  # flag invalid images
             self.invalidate[obj, instance][resolution] = [False for _ in range(len(image_pool))]
-        
+
         mask_bg = (self.mask_bg == True) or (self.mask_bg == 'rand' and rng.choice(2))
-       
+
         imgs_idxs = deque(imgs_idxs)
 
         max_depth_min = 1e8
         max_depth_max = 0.      
         max_depth_first = None  
-        
+
 
         views = []
 
@@ -231,7 +231,7 @@ class Co3d(BaseManyViewDataset):
 
                 # update the depthmap with mask
                 depthmap *= maskmap
-                            
+
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intrinsics, resolution, rng=rng, info=impath)
 
@@ -244,15 +244,15 @@ class Co3d(BaseManyViewDataset):
 
             if input_metadata['maximum_depth'] > max_depth_max:
                 max_depth_max = input_metadata['maximum_depth']
-            
+
             if input_metadata['maximum_depth'] < max_depth_min:
                 max_depth_min = input_metadata['maximum_depth']
-            
+
             if max_depth_first is None:
                 max_depth_first = input_metadata['maximum_depth']
-            
-            
-            
+
+
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,
@@ -266,5 +266,5 @@ class Co3d(BaseManyViewDataset):
         if max_depth_max / max_depth_min > 100. or max_depth_max / max_depth_first > 10.:
             new_idx = rng.integers(0, self.__len__()-1)
             return self.get_views_flexible_order(new_idx, resolution, rng)
-        
+
         return views

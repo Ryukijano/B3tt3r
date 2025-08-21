@@ -122,7 +122,7 @@ def list_scenes_available(base_output_dir, scenes_dataset_paths=SCENES_DATASET):
     # ScanNet
     # scenes_data += list_scenes(base_output_dir=os.path.join(base_output_dir, "scannet"), 
     #                         base_path=scenes_dataset_paths["scannet"])
-    
+
     # Replica
     # list_replica_scenes(base_output_dir=os.path.join(base_output_dir, "replica"),
     #                     base_path=scenes_dataset_paths["replica"])

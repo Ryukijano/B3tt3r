@@ -25,33 +25,33 @@ class Scannet(BaseManyViewDataset):
 
          # load all scenes
         self.load_all_scenes(ROOT)
-    
+
     def __len__(self):
         return len(self.scene_list) * self.num_seq
 
     def load_all_scenes(self, base_dir):
-        
+
         self.folder = {'train': 'scans', 'val': 'scans', 'test': 'scans_test'}[self.split]
-        
+
         if self.test_id is None:
             meta_split = osp.join(base_dir, 'splits', f'scannetv2_{self.split}.txt')
-            
+
             if not osp.exists(meta_split):
                 raise FileNotFoundError(f"Split file {meta_split} not found")
-            
+
             with open(meta_split) as f:
                 self.scene_list = f.read().splitlines()
-                
+
             print(f"Found {len(self.scene_list)} scenes in split {self.split}")
-            
+
         else:
             if isinstance(self.test_id, list):
                 self.scene_list = self.test_id
             else:
                 self.scene_list = [self.test_id]
-                
+
             print(f"Test_id: {self.test_id}")
-    
+
     def _get_views(self, idx, resolution, rng, attempts=0): 
         scene_id = self.scene_list[idx // self.num_seq]
 
@@ -88,7 +88,7 @@ class Scannet(BaseManyViewDataset):
 
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intri, resolution, rng=rng, info=impath)
-            
+
             # Check if the image is valid
             num_valid = (depthmap > 0.0).sum()
             if num_valid == 0 or (not np.isfinite(camera_pose).all()):
@@ -100,7 +100,7 @@ class Scannet(BaseManyViewDataset):
                         new_idx = rng.integers(0, self.__len__()-1)
                         return self._get_views(new_idx, resolution, rng)
                     return self._get_views(idx, resolution, rng, attempts+1)
-                
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,
@@ -110,7 +110,7 @@ class Scannet(BaseManyViewDataset):
                 label=osp.join(scene_id, im_idx),
                 instance=osp.split(impath)[1],
             ))
-        
+
         return views
 
 if __name__ == "__main__":
@@ -126,11 +126,11 @@ if __name__ == "__main__":
 
 
 
-        
 
 
 
 
 
-    
+
+
 
