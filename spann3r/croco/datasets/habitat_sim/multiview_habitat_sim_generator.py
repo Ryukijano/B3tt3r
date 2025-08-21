@@ -55,7 +55,7 @@ def compute_pointcloud_overlaps_scikit(pointcloud1, pointcloud2, distance_thresh
         distances1 = NearestNeighbors(n_neighbors=2).fit(pointcloud1).kneighbors(pointcloud1)[0][:, 1]
         distances2 = NearestNeighbors(n_neighbors=2).fit(pointcloud2).kneighbors(pointcloud2)[0][:, 1]
         distance_threshold = (np.mean(distances1) + np.mean(distances2)) / 2
-        
+
     nbrs = NearestNeighbors(n_neighbors=1, algorithm = 'kd_tree').fit(pointcloud2)
     distances, indices = nbrs.kneighbors(pointcloud1)
     intersection1 = np.count_nonzero(distances.flatten() < distance_threshold)

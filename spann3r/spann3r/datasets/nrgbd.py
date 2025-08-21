@@ -15,7 +15,7 @@ class NRGBD(BaseManyViewDataset):
                  test_id=None, full_video=False, 
                  tuple_path=None, seq_id=None,
                  kf_every=1, *args, ROOT, **kwargs):
-        
+
         self.ROOT = ROOT
         super().__init__(*args, **kwargs)
         self.num_seq = num_seq
@@ -30,7 +30,7 @@ class NRGBD(BaseManyViewDataset):
          # load all scenes
         self.load_all_tuples(tuple_path)
         self.load_all_scenes(ROOT)
-    
+
     def __len__(self):
         if self.tuple_list is not None:
             return len(self.tuple_list)
@@ -40,22 +40,22 @@ class NRGBD(BaseManyViewDataset):
         if tuple_path is not None:
             with open(tuple_path) as f:
                 self.tuple_list = f.read().splitlines()
-        
+
         else:
             self.tuple_list = None
-    
+
     def load_all_scenes(self, base_dir):
-        
+
         scenes = os.listdir(base_dir)
-        
+
         if self.test_id is not None:
             self.scene_list = [self.test_id]
-        
+
         else:
             self.scene_list = scenes
-        
+
         print(f"Found {len(self.scene_list)} sequences in split {self.split}")
-    
+
     def load_poses(self, path):
         file = open(path, "r")
         lines = file.readlines()
@@ -75,14 +75,14 @@ class NRGBD(BaseManyViewDataset):
         return np.array(poses, dtype=np.float32), valid
 
 
-    
+
     def _get_views(self, idx, resolution, rng):
 
         if self.tuple_list is not None:
             line = self.tuple_list[idx].split(" ")
             scene_id = line[0]
             img_idxs = line[1:]
-        
+
         else:
             scene_id = self.scene_list[idx // self.num_seq]
 
@@ -93,7 +93,7 @@ class NRGBD(BaseManyViewDataset):
 
         fx, fy, cx, cy = 554.2562584220408, 554.2562584220408, 320, 240
         intrinsics_ = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
-        
+
         posepath = osp.join(self.ROOT, scene_id, f'poses.txt')
         camera_poses, valids = self.load_poses(posepath)
 

@@ -142,13 +142,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""Example of use -- listing commands to generate data for scenes available:
     > python datasets/habitat_sim/generate_multiview_habitat_images.py --list_commands
     """)
-    
+
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--list_commands", action='store_true', help="list commandlines to run if true")
     parser.add_argument("--scene", type=str, default="")
     parser.add_argument("--scene_dataset_config_file", type=str, default="")
     parser.add_argument("--navmesh", type=str, default="")
-    
+
     parser.add_argument("--generate_depth", type=int, default=1)
     parser.add_argument("--exist_ok", type=int, default=0)
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     if args.list_commands:
         # Listing scenes available...
         scenes_data = list_scenes_available(base_output_dir=args.output_dir)
-        
+
         for scene_data in scenes_data:
             print(create_commandline(scene_data, generate_depth=generate_depth, exist_ok=exist_ok), file=open("generate_multiview_images.sh", "a"))
     else:

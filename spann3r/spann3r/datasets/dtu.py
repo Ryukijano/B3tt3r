@@ -17,7 +17,7 @@ class DTU(BaseManyViewDataset):
                  *args, ROOT, **kwargs):
         self.ROOT = ROOT
         super().__init__(*args, **kwargs)
-        
+
         self.num_seq = num_seq
         self.num_frames = num_frames
         self.max_thresh = max_thresh
@@ -26,27 +26,27 @@ class DTU(BaseManyViewDataset):
         self.full_video = full_video
         self.kf_every = kf_every
         self.sample_pairs = sample_pairs
-    
+
         # load all scenes
         self.load_all_scenes(ROOT)
-    
+
     def __len__(self):
         return len(self.scene_list) * self.num_seq
 
     def load_all_scenes(self, base_dir):
-        
+
         if self.test_id is None:
             self.scene_list = os.listdir(osp.join(base_dir))
             print(f"Found {len(self.scene_list)} scenes in split {self.split}")
-            
+
         else:
             if isinstance(self.test_id, list):
                 self.scene_list = self.test_id
             else:
                 self.scene_list = [self.test_id]
-                
+
             print(f"Test_id: {self.test_id}")
-    
+
     def load_cam_mvsnet(self, file, interval_scale=1):
         """ read camera txt file """
         cam = np.zeros((2, 4, 4))
@@ -83,51 +83,51 @@ class DTU(BaseManyViewDataset):
             cam[1][3][1] = 0
             cam[1][3][2] = 0
             cam[1][3][3] = 0
-        
-        
+
+
         extrinsic = cam[0].astype(np.float32)
         intrinsic = cam[1].astype(np.float32)
 
         return intrinsic, extrinsic
-    
+
     def sample_pairs(self, pairs_path, seq_id):
-        
+
         cluster_lines = open(pairs_path).read().splitlines()
         ref_idx = int(cluster_lines[2 * seq_id + 1])
-        
+
         cluster_info =  cluster_lines[2 * seq_id + 2].split() 
         list_idx = [] 
-        
+
         list_idx.append('{:08d}.jpg'.format(ref_idx))
-        
+
         for cidx in range(self.num_frames):
             list_idx.append('{:08d}.jpg'.format(int(cluster_info[2 * cidx + 1])))
-        
+
         list_idx.reverse()
-        
-        
+
+
         return list_idx
-    
+
     def _get_views(self, idx, resolution, rng): 
         scene_id = self.scene_list[idx // self.num_seq]
         seq_id = idx % self.num_seq
 
         print('Scene ID:', scene_id)
-        
+
         image_path = osp.join(self.ROOT, scene_id, 'images')
         depth_path = osp.join(self.ROOT, scene_id, 'depths')
         mask_path = osp.join(self.ROOT, scene_id, 'binary_masks')
         cam_path = osp.join(self.ROOT, scene_id, 'cams')
         pairs_path = osp.join(self.ROOT, scene_id, 'pair.txt')
 
-        
+
 
         if not self.full_video:
             img_idxs = self.sample_pairs(pairs_path, seq_id)
         else:
             img_idxs = sorted(os.listdir(image_path))
             img_idxs = self.sample_frame_idx(img_idxs, rng, full_video=self.full_video)
-        
+
         views = []
         imgs_idxs = deque(img_idxs)
 
@@ -152,14 +152,14 @@ class DTU(BaseManyViewDataset):
             kernel = np.ones((10, 10), np.uint8)  # Define the erosion kernel
             mask = cv2.erode(mask, kernel, iterations=1)
             depthmap = depthmap * mask
-            
+
             cur_intrinsics, camera_pose = self.load_cam_mvsnet(open(campath, 'r'))
             intrinsics = cur_intrinsics[:3, :3]
             camera_pose = np.linalg.inv(camera_pose)
 
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intrinsics, resolution, rng=rng, info=impath)
-            
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,
@@ -177,7 +177,7 @@ class DTU(BaseManyViewDataset):
             return img_idxs[::self.kf_every]
         else:
             return rng.sample(img_idxs, self.num_frames)
-    
+
     def _crop_resize_if_necessary(self, rgb_image, depthmap, intrinsics, resolution, rng, info):
         # Implement the necessary logic to crop and resize the images if needed
         # This is a placeholder implementation

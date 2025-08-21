@@ -26,14 +26,14 @@ def get_args_parser():
     parser.add_argument('--conf_thresh', type=float, default=0.0, help='confidence threshold')
 
     return parser
-    
+
 
 def main(args):
     workspace = args.exp_path
     ckpt_path = osp.join(workspace, args.ckpt)
     if not osp.exists(workspace):
         raise FileNotFoundError(f"Workspace {workspace} not found")
-    
+
     exp_path = osp.join(workspace, args.exp_name)
     os.makedirs(exp_path, exist_ok=True)
 
@@ -47,7 +47,7 @@ def main(args):
     }
     model = Spann3R(dus3r_name='./checkpoints/DUSt3R_ViTLarge_BaseDecoder_512_dpt.pth', 
                 use_feat=False).to(args.device)
-    
+
     model.load_state_dict(torch.load(ckpt_path, map_location=args.device)['model'])
     model.eval()    
 
@@ -88,7 +88,7 @@ def main(args):
 
 
                 print(f'Started reconstruction for {name_data} {i+1}/{len(dataloader)}')
-                
+
                 if args.offline:
                     imgs_all = []
                     for j, view in enumerate(batch):
@@ -121,13 +121,13 @@ def main(args):
 
                 fps_all.append(fps)
                 time_all.append(end - start)
-                
+
 
                 # Evaluation
                 print(f'Evaluation for {name_data} {i+1}/{len(dataloader)}')
                 gt_pts, pred_pts, gt_factor, pr_factor, masks, monitoring = criterion.get_all_pts3d_t(ordered_batch, preds_all)
                 pred_scale, gt_scale, pred_shift_z, gt_shift_z  = monitoring['pred_scale'], monitoring['gt_scale'], monitoring['pred_shift_z'], monitoring['gt_shift_z']
-                
+
                 in_camera1 = None
                 pts_all = []
                 pts_gt_all = []
@@ -138,7 +138,7 @@ def main(args):
                 for j, view in enumerate(ordered_batch):
                     if in_camera1 is None:
                         in_camera1 = view['camera_pose'][0].cpu()
-                    
+
                     image = view['img'].permute(0, 2, 3, 1).cpu().numpy()[0]
                     mask = view['valid_mask'].cpu().numpy()[0]
 
@@ -160,7 +160,7 @@ def main(args):
                     pts_gt_all.append(pts_gt[None, ...])
                     masks_all.append(mask[None, ...])
                     conf_all.append(conf[None, ...])
-                
+
                 images_all = np.concatenate(images_all, axis=0)
                 pts_all = np.concatenate(pts_all, axis=0)
                 pts_gt_all = np.concatenate(pts_gt_all, axis=0)
@@ -185,7 +185,7 @@ def main(args):
                 else:
                     threshold = 0.1
 
-                
+
                 pts_all_masked = pts_all[masks_all > 0]
                 pts_gt_all_masked = pts_gt_all[masks_all > 0]
                 images_all_masked = images_all[masks_all > 0]
@@ -204,9 +204,9 @@ def main(args):
                 reg_p2p = o3d.pipelines.registration.registration_icp(
                     pcd, pcd_gt, threshold, trans_init,
                     o3d.pipelines.registration.TransformationEstimationPointToPoint())
-                
+
                 transformation = reg_p2p.transformation
-                            
+
                 pcd = pcd.transform(transformation)
                 pcd.estimate_normals()
                 pcd_gt.estimate_normals()
@@ -216,7 +216,7 @@ def main(args):
 
                 acc, acc_med, nc1, nc1_med = accuracy(pcd_gt.points, pcd.points, gt_normal, pred_normal)
                 comp, comp_med, nc2, nc2_med = completion(pcd_gt.points, pcd.points, gt_normal, pred_normal)
-                
+
 
                 print(f"Idx: {scene_id}, Acc: {acc}, Comp: {comp}, NC1: {nc1}, NC2: {nc2} - Acc_med: {acc_med}, Compc_med: {comp_med}, NC1c_med: {nc1_med}, NC2c_med: {nc2_med}", file=open(log_file, "a"))
 
@@ -239,18 +239,17 @@ def main(args):
 
 
                 # Get depth from pcd and run TSDFusion
-                
-            
+
+
             print(f"Dataset: {name_data}, Accuracy: {acc_all/len(dataloader)}, Completion: {comp_all/len(dataloader)}, NC1: {nc1_all/len(dataloader)}, NC2: {nc2_all/len(dataloader)} - Acc_med: {acc_all_med/len(dataloader)}, Comp_med: {comp_all_med/len(dataloader)}, NC1_med: {nc1_all_med/len(dataloader)}, NC2_med: {nc2_all_med/len(dataloader)}", file=open(log_file, "a"))
             print(f"Average fps: {sum(fps) / len(fps)}, Average time: {sum(time_all) / len(time_all)}", file=open(log_file, "a"))
-                
+
 
 
 if __name__ == '__main__':
     parser = get_args_parser()
     args = parser.parse_args()
     main(args)
-                
 
 
 
@@ -259,16 +258,17 @@ if __name__ == '__main__':
 
 
 
-                    
-                    
-
-
-
-                    
 
 
 
 
 
-                
+
+
+
+
+
+
+
+
 

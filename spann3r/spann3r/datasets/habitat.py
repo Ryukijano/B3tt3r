@@ -18,29 +18,29 @@ class habitat(BaseManyViewDataset):
 
         # load all scenes
         self.load_all_scenes(ROOT, num_seq)
-    
+
     def __len__(self):
         return len(self.scene_list) * self.num_seq
-    
+
     def load_all_scenes(self, base_dir, num_seq=200):
-        
+
         self.scenes = {}
-        
+
         data_all = os.listdir(base_dir)
         print('All datasets in Habitat:', data_all)
-        
+
         for data in data_all:
             scenes = os.listdir(osp.join(base_dir, data))
             self.scenes[data] = scenes
-        
+
         self.scenes = {(k, v2): list(range(num_seq)) for k, v in self.scenes.items() 
                            for v2 in v}
         self.scene_list = list(self.scenes.keys())
-    
+
     def _get_views(self, idx, resolution, rng, attempts=0): 
         data, scene = self.scene_list[idx // self.num_seq]
         seq_id = idx % self.num_seq
-        
+
 
         imgs_idxs_ = list(range(1, self.num_frames+1))
         rng.shuffle(imgs_idxs_)
@@ -68,7 +68,7 @@ class habitat(BaseManyViewDataset):
             # cam_r: [3, 3], cam_t: [3, ]
             cam_r = np.array(cam_params['R_cam2world'], dtype=np.float32)
             cam_t = np.array(cam_params['t_cam2world'], dtype=np.float32)
-            
+
             # camera_pose: [4, 4]
             camera_pose = np.eye(4).astype(np.float32)
             camera_pose[:3, :3] = cam_r
@@ -76,14 +76,14 @@ class habitat(BaseManyViewDataset):
 
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intrinsics_, resolution, rng=rng, info=impath)
-            
+
             num_valid = (depthmap > 0.0).sum()
             if num_valid == 0 or (not np.isfinite(camera_pose).all()):
                 if attempts >= 5:
                     new_idx = rng.integers(0, self.__len__()-1)
                     return self._get_views(new_idx, resolution, rng)
                 return self._get_views(idx, resolution, rng, attempts+1)
-            
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,

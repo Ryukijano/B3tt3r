@@ -32,7 +32,7 @@ class PixelwiseTaskWithDPT(nn.Module):
         self.num_channels = num_channels
         self.hooks_idx = hooks_idx
         self.layer_dims = layer_dims
-    
+
     def setup(self, croconet):
         dpt_args = {'output_width_ratio': self.output_width_ratio, 'num_channels': self.num_channels}
         if self.hooks_idx is None:

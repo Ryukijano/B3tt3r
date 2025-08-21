@@ -26,11 +26,11 @@ class CroCoDownstreamMonocularEncoder(CroCoNet):
                  head,
                  **kwargs):
         """ Build network for monocular downstream task, only using the encoder.
-        It takes an extra argument head, that is called with the features 
+        It takes an extra argument head, that is called with the features
           and a dictionary img_info containing 'width' and 'height' keys
         The head is setup with the croconet arguments in this init function
         NOTE: It works by *calling super().__init__() but with redefined setters
-        
+
         """
         super(CroCoDownstreamMonocularEncoder, self).__init__(**kwargs)
         head.setup(self)
@@ -62,8 +62,8 @@ class CroCoDownstreamMonocularEncoder(CroCoNet):
         need_all_layers = hasattr(self.head, 'return_all_blocks') and self.head.return_all_blocks
         out, _, _ = self._encode_image(img, do_mask=False, return_all_blocks=need_all_layers)
         return self.head(out, img_info)
-        
-        
+
+
 class CroCoDownstreamBinocular(CroCoNet):
 
     def __init__(self,
@@ -90,7 +90,7 @@ class CroCoDownstreamBinocular(CroCoNet):
     def _set_prediction_head(self, *args, **kwargs):
         """ No prediction head for downstream tasks, define your own head """
         return
-        
+
     def encode_image_pairs(self, img1, img2, return_all_blocks=False):
         """ run encoder for a pair of images
             it is actually ~5% faster to concatenate the images along the batch dimension 

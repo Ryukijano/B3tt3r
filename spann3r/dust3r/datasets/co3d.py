@@ -35,7 +35,7 @@ class Co3d(BaseStereoViewDataset):
 
         # for each scene, we have 100 images ==> 360 degrees (so 25 frames ~= 90 degrees)
         # we prepare all combinations such that i-j = +/- [5, 10, .., 90] degrees
-        
+
         self.combinations = [(i, j)
                              for i, j in itertools.combinations(range(100), 2)
                              if 0 < abs(i-j) <= 30 and abs(i-j) % 5 == 0] # weird choice
@@ -49,7 +49,7 @@ class Co3d(BaseStereoViewDataset):
         # choose a scene
         obj, instance = self.scene_list[idx // len(self.combinations)]
         image_pool = self.scenes[obj, instance]
-        
+
         # Get image index
         im1_idx, im2_idx = self.combinations[idx % len(self.combinations)]
 

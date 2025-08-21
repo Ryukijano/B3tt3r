@@ -44,8 +44,8 @@ def load_cam_mvsnet(file, interval_scale=1):
             cam[1][3][1] = 0
             cam[1][3][2] = 0
             cam[1][3][3] = 0
-        
-        
+
+
         extrinsic = cam[0].astype(np.float32)
         intrinsic = cam[1].astype(np.float32)
 
@@ -89,68 +89,68 @@ def render_dtu_scenes(path_to_scan, method='furu'):
     else:
         path_to_depths = os.path.join(path_to_scan, 'depths')
         path_to_mesh = os.path.join(path_to_scan, f'{scan_id:03d}_pcd.ply')
-    
+
     #path_to_mesh = os.path.join(path_to_scan, 'stl001_total.ply')
-    
+
     if not os.path.exists(path_to_depths):
         os.makedirs(path_to_depths)
-    
+
     mesh = trimesh.load_mesh(path_to_mesh)
-    
+
     frames = sorted(os.listdir(path_to_images))
-    
+
     img = cv2.imread(os.path.join(path_to_images, frames[0]))
     H, W, _ = img.shape
-    
+
     for i, frame in enumerate(frames):
         campath = os.path.join(path_to_cameras, frame.replace('.jpg', '_cam.txt'))
         print(campath)
         cur_intrinsics, camera_pose = load_cam_mvsnet(open(campath, 'r'))
         camera_pose = np.linalg.inv(camera_pose)
-        
+
         camera_pose[:, 1:3] *= -1.0
-        
-        
-        
+
+
+
         print(cur_intrinsics)
-        
+
         depth = render_depth_maps(mesh, [camera_pose], cur_intrinsics, H, W, near=0.01, far=5000.)[0]
-        
+
         # plt.imshow(depth)
         # plt.show()      
         # Save depth map
         #cv2.imwrite(os.path.join(path_to_depths, frame.replace('.jpg', '.png')), depth)
         # depth_16bit = (depth).astype(np.uint16)  # Scale to millimeters
-        
+
         # # Save depth map as 16-bit PNG
         # depth_filename = os.path.join(path_to_depths, frame.replace('.jpg', '.png'))
         # cv2.imwrite(depth_filename, depth_16bit)
         # depth = depth.astype(np.float32)
         depth_filename = os.path.join(path_to_depths, frame.replace('.jpg', '.npy'))
         np.save(depth_filename, depth)
-        
+
 def get_dtu_mask(path_to_scan, method='furu'):
-    
+
     if method is not None:
         path_to_depths = os.path.join(path_to_scan, f'depths_{method}')
         path_to_masks = os.path.join(path_to_scan, f'masks_{method}')
-    
+
     else:
         path_to_depths = os.path.join(path_to_scan, 'depths')
         path_to_masks = os.path.join(path_to_scan, 'masks')
-    
+
     if not os.path.exists(path_to_masks):
         os.makedirs(path_to_masks)
-    
+
 
     frames = sorted(os.listdir(path_to_depths))
-    
+
     for i, frame in enumerate(frames):
         depth_filename = os.path.join(path_to_depths, frame)        
         depth = np.load(depth_filename)
-        
+
         mask_path = os.path.join(path_to_masks, frame.replace('.npy', '.png'))
-        
+
         mask = np.ones_like(depth) * 255
         mask[depth == 0] = 0
         mask[depth>900] = 0
@@ -160,21 +160,21 @@ def get_dtu_mask(path_to_scan, method='furu'):
 def get_mesh_from_ply(path_to_scan, depth=9, density_thresh=0.1):
     scan_id = int(''.join(filter(str.isdigit, os.path.basename(path_to_scan))))
     path_to_ply = os.path.join(path_to_scan, f'stl{scan_id:03d}_total.ply')
-    
+
     pcd = o3d.io.read_point_cloud(path_to_ply)
     mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
         pcd, depth=depth)
-    
+
     vertices_to_remove = densities < np.quantile(densities, density_thresh)
 
     new_mesh = copy.deepcopy(mesh)      
     new_mesh = copy.deepcopy(mesh)
     new_mesh.remove_vertices_by_mask(vertices_to_remove)
-    
+
     # save mesh
     path_to_mesh = os.path.join(path_to_scan, f'{scan_id:03d}_pcd.ply')
     o3d.io.write_triangle_mesh(path_to_mesh, new_mesh)
-    
+
 
 
 
@@ -186,11 +186,11 @@ scans = sorted(os.listdir(path_to_dtu))
 
 for scan in tqdm(scans):
     print(f"Processing {scan}")
-    
+
     path_to_scan = os.path.join(path_to_dtu, scan)
-    
+
     get_mesh_from_ply(path_to_scan)
-    
+
     render_dtu_scenes(path_to_scan, method=None)
     #get_dtu_mask(path_to_scan, None)
-    
+

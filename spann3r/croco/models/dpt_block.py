@@ -420,7 +420,7 @@ class DPTOutputAdapter(nn.Module):
             #input_info: Dict):
         assert self.dim_tokens_enc is not None, 'Need to call init(dim_tokens_enc) function first'
         H, W = image_size
-        
+
         # Number of patches in height and width
         N_H = H // (self.stride_level * self.P_H)
         N_W = W // (self.stride_level * self.P_W)

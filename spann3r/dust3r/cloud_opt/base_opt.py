@@ -298,11 +298,11 @@ class BasePCOptimizer (nn.Module):
 
     def get_mst_tree(self):
         return init_fun.init_minimum_spanning_tree(self, return_tree=True)
-    
+
 
     def get_tsp(self):
         return init_fun.get_tsp(self)
-    
+
     @torch.cuda.amp.autocast(enabled=False)
     def compute_global_alignment(self, init=None, niter_PnP=10, **kw):
         if init is None:

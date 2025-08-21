@@ -99,14 +99,14 @@ def find_render_cam(pcd, poses_all=None, cam_width=0.016, cam_height=0.012, cam_
         ctr = vis.get_view_control()
         camera_params = ctr.convert_to_pinhole_camera_parameters()
         last_camera_params = camera_params 
-        
+
         print("Intrinsic matrix:")
         print(camera_params.intrinsic.intrinsic_matrix)
         print("\nExtrinsic matrix:")
         print(camera_params.extrinsic)
-        
+
         return False
-    
+
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window(width=1920, height=1080)
     vis.add_geometry(pcd)
@@ -142,7 +142,7 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
     if images_all is not None:
         images_save_path = osp.join(save_path, 'imgs')
         os.makedirs(images_save_path, exist_ok=True)
-    
+
     if conf_all is not None:
         conf_save_path = osp.join(save_path, 'confs')
         os.makedirs(conf_save_path, exist_ok=True)
@@ -158,7 +158,7 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
         if conf_all is not None:
             conf_video_path = osp.join(save_path, 'confs.mp4')
             conf_writer = imageio.get_writer(conf_video_path, fps=10)
-        
+
     for frame_id in range(pts_all.shape[0]):
         pt_vis = pts_all[frame_id].astype(np.float32)
         pt_vis_rgb = mcolors.hsv_to_rgb(1-pt_vis)
@@ -169,7 +169,7 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
         if save_video:
             pts_writer.append_data(pt_vis_rgb_uint8)
 
-        
+
 
         if images_all is not None:
             image = images_all[frame_id]
@@ -179,7 +179,7 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
 
             if save_video:
                 imgs_writer.append_data(image_uint8)
-        
+
         if conf_all is not None:
             conf_image = plt.cm.jet(conf_all[frame_id])
             conf_image_uint8 = (conf_image * 255).astype(np.uint8)
@@ -188,7 +188,7 @@ def vis_pred_and_imgs(pts_all, save_path, images_all=None, conf_all=None, save_v
 
             if save_video:
                 conf_writer.append_data(conf_image_uint8)
-    
+
     if save_video:
         pts_writer.close()
         if images_all is not None:

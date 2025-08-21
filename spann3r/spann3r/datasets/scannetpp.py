@@ -29,31 +29,31 @@ class Scannetpp(BaseManyViewDataset):
 
          # load all scenes
         self.load_all_scenes(ROOT)
-    
+
     def __len__(self):
         return len(self.scene_list) * self.num_seq
-    
+
     def load_all_scenes(self, base_dir, num_seq=200):
-        
+
         if self.test_id is None:
             meta_split = osp.join(base_dir, 'splits', f'nvs_sem_{self.split}.txt')
-            
+
             if not osp.exists(meta_split):
                 raise FileNotFoundError(f"Split file {meta_split} not found")
-            
+
             with open(meta_split) as f:
                 self.scene_list = f.read().splitlines()
-                
+
             print(f"Found {len(self.scene_list)} scenes in split {self.split}")
-            
+
         else:
             if isinstance(self.test_id, list):
                 self.scene_list = self.test_id
             else:
                 self.scene_list = [self.test_id]
-                
+
             print(f"Test_id: {self.test_id}")
-    
+
     def _get_views(self, idx, resolution, rng, attempts=0):
         scene_id = self.scene_list[idx // self.num_seq]
 
@@ -86,14 +86,14 @@ class Scannetpp(BaseManyViewDataset):
             # Load camera params
             frame_metadata = frame_meta_data[filepath_index_mapping.get(im_idx)]
             intrinsics = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
-            
+
             camera_pose = np.array(frame_metadata["transform_matrix"], dtype=np.float32)
             # gl to cv
             camera_pose[:, 1:3] *= -1.0
 
             rgb_image, depthmap, intrinsics = self._crop_resize_if_necessary(
                 rgb_image, depthmap, intrinsics, resolution, rng=rng, info=impath)
-            
+
             num_valid = (depthmap > 0.0).sum()
             if num_valid == 0 or (not np.isfinite(camera_pose).all()):
                 if self.full_video:
@@ -104,7 +104,7 @@ class Scannetpp(BaseManyViewDataset):
                         new_idx = rng.integers(0, self.__len__()-1)
                         return self._get_views(new_idx, resolution, rng)
                     return self._get_views(idx, resolution, rng, attempts+1)
-            
+
             views.append(dict(
                 img=rgb_image,
                 depthmap=depthmap,

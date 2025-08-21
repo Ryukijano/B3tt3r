@@ -39,7 +39,7 @@ class Bett3R(AsymmetricMASt3R):
     """BETT3R model extending MASt3R with spatial memory"""
     def __init__(self, *args, memory_size=1024, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Initialize spatial memory
         self.spatial_memory = SpatialMemory(
             feature_dim=self.encoder.embed_dim,
@@ -50,7 +50,7 @@ class Bett3R(AsymmetricMASt3R):
         """Forward pass with spatial memory integration"""
         # Get base features from MASt3R
         base_feats = super().forward(batch)
-        
+
         # Extract camera poses and 3D points
         poses = batch['camera_pose']
         pts3d = batch['pts3d']
@@ -64,7 +64,7 @@ class Bett3R(AsymmetricMASt3R):
             # Transform to world space
             world_pt = geotrf(inv(pose), pts)
             world_pts.append(world_pt)
-            
+
             # Get corresponding features
             feat = base_feats[i]
             world_feats.append(feat)
@@ -74,16 +74,16 @@ class Bett3R(AsymmetricMASt3R):
 
         # Update spatial memory
         memory_feats = self.spatial_memory.update(world_feats, world_pts)
-        
+
         # Enhance base features with memory
         enhanced_feats = []
         for i in range(len(poses)):
             pose = poses[i]
             pts = pts3d[i]
-            
+
             # Query memory at current points
             retrieved = self.spatial_memory.query(pts)
-            
+
             # Combine with base features
             enhanced = base_feats[i] + retrieved
             enhanced_feats.append(enhanced)

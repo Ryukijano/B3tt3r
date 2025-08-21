@@ -26,10 +26,10 @@ def _interleave_imgs(img1, img2):
 
 def make_batch_symmetric(batch):
     '''
-    view1: 
+    view1:
         - img: Bs, 3, H, W
         - img size: Bs, 2
-    
+
     '''
     view1, view2 = batch
     view1, view2 = (_interleave_imgs(view1, view2), _interleave_imgs(view2, view1))
